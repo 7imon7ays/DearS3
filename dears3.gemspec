@@ -7,6 +7,7 @@ Gem::Specification.new do |spec|
   spec.name          = "dears3"
   spec.version       = DearS3::VERSION
   spec.authors       = ["7imon7ays"]
+  spec.homepage      = "https://github.com/7imon7ays/DearS3"
   spec.summary       = %q{Sync an S3 bucket with your current directory.}
   spec.license       = "MIT"
 
