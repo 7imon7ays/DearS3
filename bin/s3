@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+
+begin
+  require 'dears3'
+rescue LoadError
+  require 'rubygems'
+  require 'dears3'
+end
+
+DearS3::Cli::S3.start ARGV
+
