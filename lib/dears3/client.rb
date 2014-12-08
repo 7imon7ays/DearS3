@@ -1,5 +1,7 @@
 require 'aws-sdk'
 require 'thor'
+require 'digest/md5'
+require 'mime/types'
 
 class DearS3::Client
   include ::Thor::Shell
@@ -73,7 +75,7 @@ class DearS3::Client
     begin
       if new_object.exists?
         # Strip opening and closing "\" chars from AWS-formatted etag
-        etag_is_same = new_object.etag[1..-2] == Digest::MD5.hexdigest(File.read entry)
+        etag_is_same = new_object.etag[1..-2] == ::Digest::MD5.hexdigest(File.read entry)
 
         if etag_is_same
           say "\tUnchanged: #{ entry }", :blue
@@ -85,7 +87,7 @@ class DearS3::Client
       else
         say "\tUploading: '#{ entry }'", :green
       end
-      content_type = MIME::Types.type_for(entry).to_s
+      content_type = ::MIME::Types.type_for(entry).to_s
       new_object.write File.open entry, content_type: content_type
     rescue ::AWS::S3::Errors::Forbidden
       say "Access denied!", :red
