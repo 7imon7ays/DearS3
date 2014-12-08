@@ -5,12 +5,9 @@ require 'dears3/version'
 
 Gem::Specification.new do |spec|
   spec.name          = "dears3"
-  spec.version       = Dears3::VERSION
-  spec.authors       = ["Simon Chaffetz"]
-  spec.email         = ["simis1000@gmail.com"]
-  spec.summary       = %q{TODO: Write a short summary. Required.}
-  spec.description   = %q{TODO: Write a longer description. Optional.}
-  spec.homepage      = ""
+  spec.version       = DearS3::VERSION
+  spec.authors       = ["7imon7ays"]
+  spec.summary       = %q{Sync an S3 bucket with your current directory.}
   spec.license       = "MIT"
 
   spec.files         = `git ls-files -z`.split("\x0")
@@ -18,6 +15,11 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
+  spec.add_dependency "aws-sdk", "~> 2.x"
+  spec.add_dependency "oj", "~> 2.x"
+  spec.add_dependency "thor", "~> 0.19.x"
+
   spec.add_development_dependency "bundler", "~> 1.6"
   spec.add_development_dependency "rake"
 end
+
