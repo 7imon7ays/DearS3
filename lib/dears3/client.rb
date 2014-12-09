@@ -6,11 +6,11 @@ require 'mime/types'
 class DearS3::Client
   include ::Thor::Shell
 
-  def initialize s3_connection
+  def initialize s3_connection, options = {}
     @s3 = s3_connection
     @bucket = nil
 
-    set_bucket
+    set_bucket options[:name]
   end
 
   def sync path
@@ -44,11 +44,11 @@ class DearS3::Client
   attr_accessor :bucket
   attr_reader :s3
 
-  def set_bucket
+  def set_bucket name
     # TODO: Optionally configure bucket name and enforce DNS requirements
     # see https://forums.aws.amazon.com/thread.jspa?messageID=570880
-    bucket_name = File.basename(Dir.getwd).gsub '_', '-'
-    self.bucket = s3.buckets[bucket_name]
+    name ||= File.basename(Dir.getwd).gsub '_', '-'
+    self.bucket = s3.buckets[name]
 
     unless bucket.exists?
       say "Creating bucket '#{ bucket.name }'"
@@ -56,6 +56,7 @@ class DearS3::Client
     end
   end
 
+  # TODO: Check bucket name availability
   def walk_and_upload path
     entries = Dir.entries path
     entries.each do |entry|
