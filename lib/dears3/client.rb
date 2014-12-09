@@ -30,6 +30,7 @@ class DearS3::Client
       cfg.index_document_suffix = index_doc
       cfg.error_document_key = error_doc # TODO: Make this optional
     end
+    bucket.acl = :public_read
     say "Bucket published at #{ bucket.url }."
   end
 
