@@ -20,7 +20,7 @@ module DearS3
             s3_upload.remove_website : s3_upload.configure_website
         end
 
-        desc "auth", "Save auth credentials in home directory"
+        desc "auth", "Save AWS credentials in home directory"
         def auth
           s3_auth = DearS3::Auth.new
           s3_auth.authenticate
