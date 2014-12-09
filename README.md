@@ -6,7 +6,8 @@ Command line tools to mirror your current directory in an AWS bucket.
 
 **Installation**
 
-Run `gem install dears3` from the command line. Only works on *NIX systems.
+Run `gem install dears3` from the command line. Only works on *NIX systems for
+now.
 
 **AWS Credentials**
 
