@@ -11,7 +11,7 @@ module DearS3
   end
 end
 
-require "dears3/auth"
+require "dears3/authentication"
 require "dears3/client"
 require "dears3/cli/s3"
 

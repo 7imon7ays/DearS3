@@ -2,11 +2,12 @@ require 'aws-sdk'
 require 'thor'
 require 'digest/md5'
 require 'mime/types'
+require 'singleton'
 
 class DearS3::Client
-  include ::Thor::Shell
+  include Singleton
 
-  def initialize s3_connection, options = {}
+  def initialize s3_connection
     @s3 = s3_connection
     @bucket = nil
 
@@ -14,29 +15,19 @@ class DearS3::Client
   end
 
   def sync path
-    say "Uploading files to bucket '#{ bucket.name }'."
     walk_and_upload path
-    say "Done syncing bucket."
   end
 
-  def configure_website
-    files = bucket.objects.map { |obj| obj.key }
-    say "Files currently in your bucket:"
-    say files.join(" | "), :green
-    index_doc = ask "Pick your bucket's index document:"
-    error_doc = ask "Pick your bucket's error document:"
-    say "Publishing your bucket. This may take a while..."
+  def configure_website index_doc, error_doc
     bucket.configure_website do |cfg|
       cfg.index_document_suffix = index_doc
       cfg.error_document_key = error_doc # TODO: Make this optional
     end
     bucket.acl = :public_read
-    say "Bucket published at #{ bucket.url }."
   end
 
   def remove_website
     bucket.remove_website_configuration
-    say "Removed #{ bucket.name } from the web."
   end
 
   private
@@ -44,14 +35,14 @@ class DearS3::Client
   attr_accessor :bucket
   attr_reader :s3
 
-  def set_bucket name
-    # TODO: Optionally configure bucket name and enforce DNS requirements
-    # see https://forums.aws.amazon.com/thread.jspa?messageID=570880
-    name ||= File.basename(Dir.getwd).gsub '_', '-'
+  def select_bucket_name name
+    name || File.basename(Dir.getwd).gsub('_', '-')
+  end
+
+  def set_bucket
     self.bucket = s3.buckets[name]
 
     unless bucket.exists?
-      say "Creating bucket '#{ bucket.name }'"
       s3.buckets.create(bucket.name, acl: :bucket_owner_full_control)
     end
   end
@@ -72,32 +63,14 @@ class DearS3::Client
   end
 
   def upload entry
-    new_object = bucket.objects[entry]
-
-    begin
-      if new_object.exists?
-        # Strip opening and closing "\" chars from AWS-formatted etag
-        etag_is_same = new_object.etag[1..-2] == ::Digest::MD5.hexdigest(File.read entry)
-
-        if etag_is_same
-          say "\tUnchanged: #{ entry }", :blue
-          return
-        else
-          # TODO: Confirm overriding files
-          say "\tUpdating: '#{ entry }'", :yellow
-        end
-      else
-        say "\tUploading: '#{ entry }'", :green
-      end
       content_type = ::MIME::Types.type_for(entry).to_s
       new_object.write File.open entry, content_type: content_type
-    rescue ::AWS::S3::Errors::Forbidden
-      say "Access denied!", :red
-      say "Make sure your credentials are correct and your bucket name isn't already taken by someone else."
-      say "Note: AWS bucket names are shared across all users."
-      say
-      abort
-    end
+  end
+
+  def entry_is_unchanged? entry
+    # Is object etag equal to the MD5 digest of the entry?
+    # Strip opening and closing "\" chars from AWS-formatted etag
+    new_object.etag[1..-2] == ::Digest::MD5.hexdigest(File.read entry)
   end
 end
 
