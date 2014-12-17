@@ -1,14 +1,17 @@
-require 'dears3/authentication_helper'
+require 'dears3/cli/authentication_helper'
+require 'dears3/cli/client_helper'
 require 'thor'
+require 'byebug'
 
 module DearS3
   class Cli
     class S3 < Thor
-
       desc "upload", "Deploy current and nested directories to S3"
       option :publish, type: :boolean, default: false # Optionally publish to the web
       option :name
       def upload
+        byebug
+        say "hello world"
         client_helper.upload options
       end
 
@@ -35,15 +38,19 @@ module DearS3
       end
       
       def s3_client
-        @s3_connection ||= DearS3::Client.new connection
+        @s3_connection ||= DearS3::Client.instance.with connection
       end
 
       def connection
-        DearS3::Authentication.connection
+        authentication.connect
       end
 
       def authentication_helper
-        @auhentication_helper ||= DearS3::Cli::AuthenticationHelper.new DearS3::Authentication
+        @auhentication_helper ||= DearS3::Cli::AuthenticationHelper.new authentication
+      end
+      
+      def authentication
+        @authentication ||= DearS3::Authentication.instance
       end
     end
   end

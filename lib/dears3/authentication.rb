@@ -7,7 +7,7 @@ class DearS3::Authentication
   include Singleton
 
   # TODO: Give option to upload once without storing credentials.
-  def connection
+  def connect
     # TODO: Raise error if no credentials file available
     ::AWS::S3.new aws_credentials
   end
@@ -23,6 +23,10 @@ class DearS3::Authentication
 
   def aws_credentials
     ::Oj.load File.read credentials_path
+  end
+
+  def credentials_path
+    File.expand_path '~/.aws.json'
   end
 end
 

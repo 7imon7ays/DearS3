@@ -16,32 +16,38 @@ module DearS3
         end
       end
 
-      def save_credentials!
-        authentication.create_credentials_file!
+      def save_credentials! credentials
+        authentication.create_credentials_file! credentials
       end
 
       def maybe_get_credentials
-        if File.exists? credentials_path && dont_override_credentials?
+        if File.exists?(credentials_path) && !override_credentials?
           nil
         else
           request_credentials
         end
       end
 
+      private
+
+      attr_reader :authentication
+
       def request_credentials
         access_key_id = ask "Please enter your AWS access key id:"
         secret_access_key = ask "Please enter your AWS secret access key:", echo: false
+        say
 
         { access_key_id: access_key_id, secret_access_key: secret_access_key }
       end
 
-      def dont_override_credentials?
-        choice = ask("Override existing '.aws.json' file? (y/n):") == "y"
-        %w( n no N no ).include? choice
+      def override_credentials?
+        choice = ask("Override existing '.aws.json' file? (y/n):")
+        %w( y yes Y ok OK ).include? choice
       end
 
-      private
-      attr_reader :authentication
+      def credentials_path
+        File.expand_path '~/.aws.json'
+      end
     end
   end
 end

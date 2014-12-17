@@ -1,3 +1,5 @@
+require 'byebug'
+
 module DearS3
   class Cli
     class ClientHelper
@@ -7,16 +9,37 @@ module DearS3
         @s3_client = s3_client
       end
 
-      def upload_helper options = {}
-        bucket_name = s3_client.set_bucket_name options[:name]
+      def upload options = {}
+        bucket_name = options[:name] || current_dir_to_bucket_name
+        if !s3_client.valid_bucket_name? bucket_name
+          error "Invalid bucket name"
+          abort
+        end
 
-        say "Uploading files to bucket '#{ bucket_name }'."
-        s3_client.sync "."
-        s3_client.configure_website if options[:publish]
+        s3_client.set_bucket bucket_name
+
+        if s3_client.new_bucket?
+          say "Creating bucket '#{ bucket_name }'."
+        else
+          say "Uploading files to bucket '#{ bucket_name }'."
+        end
+
+        begin
+          s3_client.walk_and_upload ".", status_proc
+        rescue ::AWS::S3::Errors::Forbidden
+          alert_access_denied
+          abort
+        end
         say "Done syncing bucket."
+        publish if options[:publish]
       end
 
-      def publish_helper
+      def current_dir_to_bucket_name
+        File.basename(Dir.getwd).gsub('_', '-')
+      end
+
+
+      def publish
         say "Files currently in your bucket:"
         say files.join(" | "), :green
         index_doc = ask "Pick your bucket's index document:"
@@ -26,37 +49,14 @@ module DearS3
         say "Bucket published at #{ bucket.url }."
       end
 
-      def unpublish_helper
+      def unpublish
         s3_client.remove_website
         say "Removed #{ bucket.name } from the web."
       end
 
-      def create_bucket name
-        # TODO: Optionally configure bucket name and enforce DNS requirements
-        # see https://forums.aws.amazon.com/thread.jspa?messageID=570880
-        say "Creating bucket '#{ bucket.name }'"
-        s3_client.set_bucket name
-      end
+      private
 
-      def upload entry
-        if entry_name_exists?
-          if client.entry_is_unchanged? entry
-            say "\tUnchanged: #{ entry }", :blue
-          else
-            # TODO: Confirm overriding files
-            say "\tUpdating: '#{ entry }'", :yellow
-          end
-        else
-          say "\tUploading: '#{ entry }'", :green
-        end
-
-        begin
-          client.upload entry
-        rescue ::AWS::S3::Errors::Forbidden
-          alert_access_denied
-          abort
-        end
-      end
+      attr_reader :s3_client
 
       def alert_access_denied
         say "Access denied!", :red
@@ -65,8 +65,19 @@ module DearS3
         say
       end
 
-      private
-      attr_reader :s3_client
+      def status_proc
+        # TODO: Confirm overriding files
+        Proc.new do |entry, status|
+          case status
+          when :unchanged
+            say "\tUnchanged: #{ entry }", :blue
+          when :update
+            say "\tUpdating: '#{ entry }'", :yellow
+          when :upload
+          say "\tUploading: '#{ entry }'", :green
+          end
+        end
+      end
     end
   end
 end
