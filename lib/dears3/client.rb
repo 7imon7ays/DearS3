@@ -3,27 +3,22 @@ require 'thor'
 require 'digest/md5'
 require 'mime/types'
 require 'singleton'
-require 'byebug'
 
 class DearS3::Client
   include Singleton
 
-  def set_bucket name
+  def set_bucket
+    name = generate_bucket_name
     self.bucket = s3.buckets[name]
 
     if new_bucket?
       s3.buckets.create(bucket.name, acl: :bucket_owner_full_control)
     end
+    bucket.name
   end
 
   def new_bucket?
     !bucket.exists?
-  end
-
-  def valid_bucket_name? name
-    # TODO: Add DNS requirements and check name availability
-    # see https://forums.aws.amazon.com/thread.jspa?messageID=570880
-    name.length > 3
   end
 
   def with s3_connection
@@ -52,16 +47,30 @@ class DearS3::Client
       cfg.error_document_key = error_doc # TODO: Make this optional
     end
     bucket.acl = :public_read
+
+    bucket.url
+  end
+
+  def files_in_bucket
+    bucket.objects.map { |obj| obj.key }
   end
 
   def remove_website
     bucket.remove_website_configuration
+    bucket.name
   end
 
   private
 
   attr_accessor :bucket
   attr_reader :s3
+
+  def generate_bucket_name
+    # TODO: Add DNS and AWS requirements
+    # - more than 3 chars, unique
+    # - https://forums.aws.amazon.com/thread.jspa?messageID=570880
+    File.basename(Dir.getwd).gsub '_', '-'
+  end
 
   def upload entry, status_proc = nil
     object = bucket.objects[entry]

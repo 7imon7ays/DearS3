@@ -1,7 +1,6 @@
 require 'dears3/cli/authentication_helper'
 require 'dears3/cli/client_helper'
 require 'thor'
-require 'byebug'
 
 module DearS3
   class Cli
@@ -10,8 +9,6 @@ module DearS3
       option :publish, type: :boolean, default: false # Optionally publish to the web
       option :name
       def upload
-        byebug
-        say "hello world"
         client_helper.upload options
       end
 
@@ -38,10 +35,10 @@ module DearS3
       end
       
       def s3_client
-        @s3_connection ||= DearS3::Client.instance.with connection
+        @s3_client ||= DearS3::Client.instance.with s3_connection
       end
 
-      def connection
+      def s3_connection
         authentication.connect
       end
 

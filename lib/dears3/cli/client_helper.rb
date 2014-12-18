@@ -1,5 +1,3 @@
-require 'byebug'
-
 module DearS3
   class Cli
     class ClientHelper
@@ -9,14 +7,8 @@ module DearS3
         @s3_client = s3_client
       end
 
-      def upload options = {}
-        bucket_name = options[:name] || current_dir_to_bucket_name
-        if !s3_client.valid_bucket_name? bucket_name
-          error "Invalid bucket name"
-          abort
-        end
-
-        s3_client.set_bucket bucket_name
+      def upload
+        bucket_name = s3_client.set_bucket
 
         if s3_client.new_bucket?
           say "Creating bucket '#{ bucket_name }'."
@@ -38,15 +30,16 @@ module DearS3
         File.basename(Dir.getwd).gsub('_', '-')
       end
 
-
       def publish
+        s3_client.set_bucket
+
         say "Files currently in your bucket:"
-        say files.join(" | "), :green
+        say s3_client.files_in_bucket.join(" | "), :green
         index_doc = ask "Pick your bucket's index document:"
         error_doc = ask "Pick your bucket's error document:"
         say "Publishing your bucket. This may take a while..."
-        s3_client.configure_website index_doc, error_doc
-        say "Bucket published at #{ bucket.url }."
+        bucket_url = s3_client.configure_website index_doc, error_doc
+        say "Bucket published at #{ bucket_url }."
       end
 
       def unpublish
