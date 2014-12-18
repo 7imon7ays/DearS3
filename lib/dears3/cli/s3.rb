@@ -6,17 +6,18 @@ module DearS3
   class Cli
     class S3 < Thor
       desc "upload", "Deploy current and nested directories to S3"
-      option :publish, type: :boolean, default: false # Optionally publish to the web
-      option :name
       def upload
-        client_helper.upload options
+        client_helper.upload
       end
 
       desc "publish", "Publish bucket as a website"
-      option :off, type: :boolean, default: false
       def publish
-        options[:off] ?
-          client_helper.unpublish : client_helper.publish
+        client_helper.publish
+      end
+
+      desc "unpublish", "Take bucket off the www"
+      def unpublish
+        client_helper.unpublish
       end
 
       desc "auth", "Save AWS credentials in home directory"
@@ -31,6 +32,7 @@ module DearS3
       private
 
       def client_helper
+        s3_client.set_bucket
         @client_helper ||= ClientHelper.new s3_client
       end
       

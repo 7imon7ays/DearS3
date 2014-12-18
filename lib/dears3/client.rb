@@ -21,6 +21,10 @@ class DearS3::Client
     !bucket.exists?
   end
 
+  def bucket_name
+    bucket.name
+  end
+
   def with s3_connection
     @bucket = nil
     @s3 = s3_connection
@@ -46,9 +50,18 @@ class DearS3::Client
       cfg.index_document_suffix = index_doc
       cfg.error_document_key = error_doc # TODO: Make this optional
     end
-    bucket.acl = :public_read
 
-    bucket.url
+    bucket.policy = generate_policy
+    # bucket web address hard-coded for now
+    "http://dears3.s3-website-us-east-1.amazonaws.com/"
+    # bucket.url
+  end
+
+  def generate_policy
+    policy = AWS::S3::Policy.new
+    resources = "arn:aws:s3:::#{ bucket_name }/*"
+    policy.allow(actions: [:get_object], resources: resources, principals: :any)
+    policy
   end
 
   def files_in_bucket
@@ -57,7 +70,7 @@ class DearS3::Client
 
   def remove_website
     bucket.remove_website_configuration
-    bucket.name
+    bucket.url
   end
 
   private

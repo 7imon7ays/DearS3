@@ -8,7 +8,7 @@ module DearS3
       end
 
       def upload
-        bucket_name = s3_client.set_bucket
+        bucket_name = s3_client.bucket_name
 
         if s3_client.new_bucket?
           say "Creating bucket '#{ bucket_name }'."
@@ -23,7 +23,6 @@ module DearS3
           abort
         end
         say "Done syncing bucket."
-        publish if options[:publish]
       end
 
       def current_dir_to_bucket_name
@@ -31,8 +30,6 @@ module DearS3
       end
 
       def publish
-        s3_client.set_bucket
-
         say "Files currently in your bucket:"
         say s3_client.files_in_bucket.join(" | "), :green
         index_doc = ask "Pick your bucket's index document:"
@@ -43,8 +40,8 @@ module DearS3
       end
 
       def unpublish
-        s3_client.remove_website
-        say "Removed #{ bucket.name } from the web."
+        bucket_url = s3_client.remove_website
+        say "Removed #{ bucket_url } from the web."
       end
 
       private
