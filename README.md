@@ -41,20 +41,16 @@ bucket. Any file beginning with "." is ignored. It syncs to arbitary levels of
 nesting so be careful with symlinks that could cause an infinite loop.
 
 The bucket will take the name of the current directory, replacing underscores
-with dashes. Note that the bucket's name must conform with DNS requirements if
-you plan on publishing it as a website.
+with dashes. If the bucket name is invalid or unavaiable, you will be prompted
+to specify the bucket's name.
 
 *Caution: If a bucket with that name already exists and contains files with the
-same names as the files in your directory, those files will be overriden without
-warning.*
-
-Run `s3 upload --publish` to publish your uploaded files as a website.
+same names as the files in your directory, those files will be overriden.*
 
 **s3 publish**
 
-Publishes the current directory as a website. Directory must already be uploaded
-to s3. Run `s3 publish --off` to roll back.
-
+Publishes the current directory as a website. Requires at least one file in the
+directory to be uploaded.
 
 ## Contributing
 
@@ -63,3 +59,4 @@ to s3. Run `s3 publish --off` to roll back.
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create a new Pull Request
+

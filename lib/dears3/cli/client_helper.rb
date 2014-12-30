@@ -59,7 +59,7 @@ module DearS3
         bucket_name = default_bucket_name
 
         if s3_client.validate_bucket_name(bucket_name)
-          bucket_name = ask "Please select the name for your bucket:"
+          bucket_name = ask "Please select your bucket's name:"
         end
 
         while error = s3_client.validate_bucket_name(bucket_name)
