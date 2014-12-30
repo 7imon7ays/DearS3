@@ -7,18 +7,25 @@ require 'singleton'
 class DearS3::Client
   include Singleton
 
-  def set_bucket
-    name = generate_bucket_name
+  def set_bucket name
     self.bucket = s3.buckets[name]
 
-    if new_bucket?
+    if new_bucket? name
       s3.buckets.create(bucket.name, acl: :bucket_owner_full_control)
     end
+
     bucket.name
   end
 
-  def new_bucket?
-    !bucket.exists?
+  def validate_bucket_name name
+    return :Invalid if invalid_bucket_name? name
+    return :Unavailable if unavailable_bucket_name? name
+
+    nil
+  end
+
+  def new_bucket? name
+    !s3.buckets[name].exists?
   end
 
   def bucket_name
@@ -48,13 +55,12 @@ class DearS3::Client
   def configure_website index_doc, error_doc
     bucket.configure_website do |cfg|
       cfg.index_document_suffix = index_doc
-      cfg.error_document_key = error_doc # TODO: Make this optional
+      cfg.error_document_key = error_doc
     end
 
     bucket.policy = generate_policy
-    # bucket web address hard-coded for now
-    "http://dears3.s3-website-us-east-1.amazonaws.com/"
-    # bucket.url
+    # TODO: find more general pattern
+    "http://#{ bucket_name }.s3-website-us-east-1.amazonaws.com/"
   end
 
   def generate_policy
@@ -65,7 +71,7 @@ class DearS3::Client
   end
 
   def files_in_bucket
-    bucket.objects.map { |obj| obj.key }
+    @files_in_bucket ||= bucket.objects.map &:key
   end
 
   def remove_website
@@ -77,13 +83,6 @@ class DearS3::Client
 
   attr_accessor :bucket
   attr_reader :s3
-
-  def generate_bucket_name
-    # TODO: Add DNS and AWS requirements
-    # - more than 3 chars, unique
-    # - https://forums.aws.amazon.com/thread.jspa?messageID=570880
-    File.basename(Dir.getwd).gsub '_', '-'
-  end
 
   def upload entry, status_proc = nil
     object = bucket.objects[entry]
@@ -104,6 +103,34 @@ class DearS3::Client
     # Is object etag equal to the MD5 digest of the entry?
     # Strip opening and closing "\" chars from AWS-formatted etag
     object.etag[1..-2] == ::Digest::MD5.hexdigest(File.read entry)
+  end
+
+  def invalid_bucket_name? name
+    name.length < 3     or
+    name.length > 62    or
+    name[-1] == '-'     or
+    name.include?(".")  or
+    name.include?(";")  or
+    name.include?("-.") or
+    name.include?(".-")
+  end
+
+  def unavailable_bucket_name? name
+    # Try deleting a non-existent object
+    # If the action is forbidden, the bucket exists and is taken
+    forbidden_exceptions = [AWS::S3::Errors::AccessDenied,
+                              AWS::S3::Errors::Forbidden]
+
+    rand_key = (0...20).map { ('a'..'z').to_a[rand(26)] }.join
+    begin
+      s3.buckets[name].objects[rand_key].delete
+    rescue *forbidden_exceptions
+      return true
+    rescue AWS::S3::Errors::NoSuchBucket
+      return false
+    end
+
+    false
   end
 end
 

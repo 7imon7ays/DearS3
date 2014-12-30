@@ -5,22 +5,22 @@ module DearS3
 
       def initialize s3_client
         @s3_client = s3_client
+
+        name = get_bucket_name
+
+        s3_client.set_bucket name
       end
 
       def upload
         bucket_name = s3_client.bucket_name
 
-        if s3_client.new_bucket?
-          say "Creating bucket '#{ bucket_name }'."
-        else
-          say "Uploading files to bucket '#{ bucket_name }'."
-        end
+        say "Uploading files to bucket '#{ bucket_name }'."
 
         begin
           s3_client.walk_and_upload ".", status_proc
         rescue ::AWS::S3::Errors::Forbidden
           alert_access_denied
-          abort
+          exit
         end
         say "Done syncing bucket."
       end
@@ -30,10 +30,17 @@ module DearS3
       end
 
       def publish
+        bucket_files = s3_client.files_in_bucket
+
+        if bucket_files.empty?
+          abort "Bucket is empty. Please upload at least one file before publishing"
+        end
+
         say "Files currently in your bucket:"
-        say s3_client.files_in_bucket.join(" | "), :green
-        index_doc = ask "Pick your bucket's index document:"
-        error_doc = ask "Pick your bucket's error document:"
+        say bucket_files.join(" | "), :green
+        index_doc = request_doc "Pick your bucket's index document:"
+        error_doc = request_doc "Pick your bucket's error document:"
+
         say "Publishing your bucket. This may take a while..."
         bucket_url = s3_client.configure_website index_doc, error_doc
         say "Bucket published at #{ bucket_url }."
@@ -47,6 +54,42 @@ module DearS3
       private
 
       attr_reader :s3_client
+
+      def get_bucket_name
+        bucket_name = default_bucket_name
+
+        if s3_client.validate_bucket_name(bucket_name)
+          bucket_name = ask "Please select the name for your bucket:"
+        end
+
+        while error = s3_client.validate_bucket_name(bucket_name)
+          bucket_name = ask "#{ error } bucket name. Please select another:"
+        end
+
+        if s3_client.new_bucket? bucket_name
+          choice = ask "Creating new bucket '#{ bucket_name }'. Continue? (y/n/abort)" end
+
+        return get_bucket_name if %w( n no N No NO ).include? choice
+        exit if choice == "abort"
+
+        bucket_name
+      end
+
+      def default_bucket_name
+        File.basename(Dir.getwd).gsub('_', '-').downcase
+      end
+
+      def request_doc request_message
+        doc = ask request_message
+        files_in_bucket = s3_client.files_in_bucket
+
+        until files_in_bucket.include? doc
+          say "No such file in your bucket. Please choose one from this list:"
+          doc = ask files_in_bucket.join(" | ") + "\n", :green
+        end
+
+        doc
+      end
 
       def alert_access_denied
         say "Access denied!", :red

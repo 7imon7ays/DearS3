@@ -32,7 +32,6 @@ module DearS3
       private
 
       def client_helper
-        s3_client.set_bucket
         @client_helper ||= ClientHelper.new s3_client
       end
       
