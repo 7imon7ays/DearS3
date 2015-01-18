@@ -109,6 +109,7 @@ class DearS3::Client
     name.length < 3     or
     name.length > 62    or
     name[-1] == '-'     or
+    name.include?('_')  or
     name.include?(".")  or
     name.include?(";")  or
     name.include?("-.") or
@@ -116,21 +117,8 @@ class DearS3::Client
   end
 
   def unavailable_bucket_name? name
-    # Try deleting a non-existent object
-    # If the action is forbidden, the bucket exists and is taken
-    forbidden_exceptions = [AWS::S3::Errors::AccessDenied,
-                              AWS::S3::Errors::Forbidden]
-
-    rand_key = (0...20).map { ('a'..'z').to_a[rand(26)] }.join
-    begin
-      s3.buckets[name].objects[rand_key].delete
-    rescue *forbidden_exceptions
-      return true
-    rescue AWS::S3::Errors::NoSuchBucket
-      return false
-    end
-
-    false
+    my_buckets = s3.buckets.map &:name
+    s3.buckets[name].exists? && !my_buckets.include?(name)
   end
 end
 

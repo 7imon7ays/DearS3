@@ -58,16 +58,17 @@ module DearS3
       def get_bucket_name
         bucket_name = default_bucket_name
 
-        if s3_client.validate_bucket_name(bucket_name)
+        unless s3_client.validate_bucket_name(bucket_name).nil?
           bucket_name = ask "Please select your bucket's name:"
         end
 
-        while error = s3_client.validate_bucket_name(bucket_name)
-          bucket_name = ask "#{ error } bucket name. Please select another:"
+        while error_type = s3_client.validate_bucket_name(bucket_name)
+          bucket_name = ask "#{ error_type } bucket name. Please select another:"
         end
 
         if s3_client.new_bucket? bucket_name
-          choice = ask "Creating new bucket '#{ bucket_name }'. Continue? (y/n/abort)" end
+          choice = ask "Creating new bucket '#{ bucket_name }'. Continue? (y/n/abort)"
+        end
 
         return get_bucket_name if %w( n no N No NO ).include? choice
         exit if choice == "abort"
